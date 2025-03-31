@@ -1,3 +1,5 @@
+import pandas as pd
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
@@ -115,18 +117,30 @@ def summarize_concall(pdf_url):
     return formatted_summary
 
 #Example static company data, replace with database or api call.
-companies = [
-    {"id": 1, "name": "Reliance Industries", "ticker": "RELIANCE"},
-    {"id": 2, "name": "Tata Consultancy Services", "ticker": "TCS"},
-    {"id": 3, "name": "Infosys", "ticker": "INFY"},
-    {"id": 4, "name": "Aadhar Housing Finance", "ticker" : "AADHARHFC"},
-    {"id": 5, "name": "Concord Enviro System", "ticker": "CEWATER"},
-    {"id": 6, "name": "Bharat Electronics Limited", "ticker": "BEL"},
-    {"id": 7, "name": "Ventive Hospitality Ltd", "ticker": "VENTIVE"},
-    {"id": 8, "name": "Technocraft Industries (India) Ltd", "ticker": "TIIL"},
-    {"id": 9, "name": "Swiggy", "ticker": "SWIGGY"}
-]
+# companies = [
+#     {"id": 1, "name": "Reliance Industries", "ticker": "RELIANCE"},
+#     {"id": 2, "name": "Tata Consultancy Services", "ticker": "TCS"},
+#     {"id": 3, "name": "Infosys", "ticker": "INFY"},
+#     {"id": 4, "name": "Aadhar Housing Finance", "ticker" : "AADHARHFC"},
+#     {"id": 5, "name": "Concord Enviro System", "ticker": "CEWATER"},
+#     {"id": 6, "name": "Bharat Electronics Limited", "ticker": "BEL"},
+#     {"id": 7, "name": "Ventive Hospitality Ltd", "ticker": "VENTIVE"},
+#     {"id": 8, "name": "Technocraft Industries (India) Ltd", "ticker": "TIIL"},
+#     {"id": 9, "name": "Swiggy", "ticker": "SWIGGY"}
+# ]
 
+
+file_path = "nse_listed_companies.csv"  # Update the path to the file you download
+df = pd.read_csv(file_path)
+
+# Create list of dictionaries in the required format
+companies = []
+for idx, row in df.iterrows():
+    companies.append({
+        "id": idx + 1,
+        "name": row["NAME OF COMPANY"],
+        "ticker": row["SYMBOL"]
+    })
 
 @app.route('/api/companies', methods=['GET'])
 def get_companies():
@@ -195,4 +209,4 @@ def get_summary():
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    app.run(debug=True, port=6000)
+    app.run(debug=True, port=5000)
