@@ -9,15 +9,25 @@ import PyPDF2
 from io import BytesIO
 import google.generativeai as genai
 
-
-
 app = Flask(__name__)
 CORS(app)  # Enable CORS for cross-origin requests
 
-
 genai.configure(api_key="AIzaSyC-RrZSvjas1tSj5NJoZBWcf3kDtJTmAxo")
-
 BASE_URL = "https://www.screener.in/company/{}/consolidated/"
+
+file_path = "nse_listed_companies.csv"  # Update the path to the file you download
+df = pd.read_csv(file_path)
+
+# Create list of dictionaries in the required format
+companies = []
+for idx, row in df.iterrows():
+    companies.append({
+        "id": idx + 1,
+        "name": row["NAME OF COMPANY"],
+        "ticker": row["SYMBOL"]
+    })
+
+
 def extract_text_from_pdf(pdf_url):
     """Downloads a PDF from a URL and extracts the text."""
     try:
@@ -39,20 +49,21 @@ def extract_text_from_pdf(pdf_url):
         return text
 
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching PDF: {e}")
-        return None
+        return f"Error fetching PDF: {e}"  # Return error message
+
     except PyPDF2.errors.PdfReadError as e:
-        print(f"Error reading PDF: {e}")
-        return None
+        return f"Error reading PDF: {e}"  # Return error message
+
     except Exception as e:
-        print(f"An unexpected error occured: {e}")
-        return None
+        return f"An unexpected error occurred: {e}"  # Return error message
 
 def summarize_concall(pdf_url):
     """Summarizes a concall PDF from a URL."""
     transcript_text = extract_text_from_pdf(pdf_url)
 
-    #print(transcript_text)
+    if isinstance(transcript_text, str) and transcript_text.startswith(
+            "Error"):  # check if an error message was returned.
+        return transcript_text  # return error message
 
     if not transcript_text:
         return "Failed to extract text from PDF."
@@ -116,32 +127,6 @@ def summarize_concall(pdf_url):
 
     return formatted_summary
 
-#Example static company data, replace with database or api call.
-# companies = [
-#     {"id": 1, "name": "Reliance Industries", "ticker": "RELIANCE"},
-#     {"id": 2, "name": "Tata Consultancy Services", "ticker": "TCS"},
-#     {"id": 3, "name": "Infosys", "ticker": "INFY"},
-#     {"id": 4, "name": "Aadhar Housing Finance", "ticker" : "AADHARHFC"},
-#     {"id": 5, "name": "Concord Enviro System", "ticker": "CEWATER"},
-#     {"id": 6, "name": "Bharat Electronics Limited", "ticker": "BEL"},
-#     {"id": 7, "name": "Ventive Hospitality Ltd", "ticker": "VENTIVE"},
-#     {"id": 8, "name": "Technocraft Industries (India) Ltd", "ticker": "TIIL"},
-#     {"id": 9, "name": "Swiggy", "ticker": "SWIGGY"}
-# ]
-
-
-file_path = "nse_listed_companies.csv"  # Update the path to the file you download
-df = pd.read_csv(file_path)
-
-# Create list of dictionaries in the required format
-companies = []
-for idx, row in df.iterrows():
-    companies.append({
-        "id": idx + 1,
-        "name": row["NAME OF COMPANY"],
-        "ticker": row["SYMBOL"]
-    })
-
 @app.route('/api/companies', methods=['GET'])
 def get_companies():
     query = request.args.get('query', '').lower()
@@ -189,7 +174,7 @@ def get_concalls(ticker):
             continue
 
     if not results:
-        return jsonify({"error": f"⚠️ No transcripts found."}), 200
+        return jsonify({"message": f"No transcripts found."}), 200
 
     return jsonify(results)
 
@@ -202,10 +187,11 @@ def get_summary():
 
     try:
         summary = summarize_concall(pdf_url)
+        if isinstance(summary, str) and summary.startswith("Error"):
+            return jsonify({"error": summary}), 400
         return jsonify({"summary": summary})
     except Exception as e:
         return jsonify({"error": f"Error generating summary: {e}"}), 500
-
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
